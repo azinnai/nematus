@@ -122,13 +122,15 @@ class TextIterator:
 
         try:
             # actual work here
-            while True:
+            buffer_empty = False
+            while not buffer_empty:
 
                 # read from source file and map to word index
                 for idx, buffer in enumerate(self.buffers):
                     try:
                         ss = buffer.pop()
                     except IndexError:
+                        buffer_empty = True
                         break
                     tmp = []
                     for w in ss:
@@ -136,19 +138,21 @@ class TextIterator:
                             if self.factors > 1:
                                 w = [self.dicts[i][f] if f in self.dicts[i] else 1 for (i,f) in enumerate(w.split('|'))]
                             else:
-                                w = [self.dicts[idx][w] if w in self.dicts[idx + self.factors - 1] else 1]
+                                w = [self.dicts[idx][w] if w in self.dicts[idx] else 1]
                             tmp.append(w)
                         else:
-                            w = [self.dicts[idx][w] if w in self.dicts[idx+self.factors-1] else 1]
+                            w = [self.dicts[idx][w] if w in self.dicts[idx] else 1]
                             tmp.extend(w)
                     ss = tmp
-
                     batches[idx].append(ss)
+
                 len_batches = [len(batch) for batch in batches]
 
                 if any(x > self.batch_size for x in len_batches):
                     break
+
         except IOError:
             self.end_of_data = True
 
+        print 'returned'
         return batches
