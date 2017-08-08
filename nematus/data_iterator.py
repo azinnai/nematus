@@ -90,19 +90,23 @@ class TextIterator:
                     ss = ss.split()
 
                     if self.skip_empty and len(ss) == 0:
-                        continue
+                        break
                     if len(ss) > self.maxlen:
-                        continue
+                        break
 
                     self.buffers[idx].append(ss)
-                    if len(self.buffers[0]) == self.k:
-                        break
+
+                if len(self.buffers[0]) == self.k:
+                    break
 
             if len(self.buffers[0]) == 0:
                 self.end_of_data = False
                 self.reset()
                 raise StopIteration
 
+            print len(self.buffers)
+            print [len(x) for x in self.buffers]
+            
             # sort by target buffer
             if self.sort_by_length:
                 tlen = numpy.array([len(t) for t in self.buffers[1]])
