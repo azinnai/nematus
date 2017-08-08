@@ -106,9 +106,6 @@ class TextIterator:
                 self.reset()
                 raise StopIteration
 
-            print len(self.buffers)
-            print [len(x) for x in self.buffers]
-
             # sort by target buffer
             if self.sort_by_length:
                 tlen = numpy.array([len(t) for t in self.buffers[1]])
