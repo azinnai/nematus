@@ -11,56 +11,50 @@ def fopen(filename, mode='r'):
     return open(filename, mode)
 
 class TextIterator:
-    """Simple Bitext iterator."""
-    def __init__(self, source, target,
-                 source_dicts, target_dict,
+    """Simple Multitext iterator."""
+    def __init__(self, datasets,
+                 dicts,
+                 n_words_dicts=None,
                  batch_size=128,
                  maxlen=100,
-                 n_words_source=-1,
-                 n_words_target=-1,
                  skip_empty=False,
                  shuffle_each_epoch=False,
                  sort_by_length=True,
-                 use_factor=False,
+                 factors=1,
+                 outputs=1,
                  maxibatch_size=20):
+
         if shuffle_each_epoch:
-            self.source_orig = source
-            self.target_orig = target
-            self.source, self.target = shuffle.main([self.source_orig, self.target_orig], temporary=True)
+            self.datasets_orig = datasets
+            self.datasets = shuffle.main(datasets, temporary=True)
         else:
-            self.source = fopen(source, 'r')
-            self.target = fopen(target, 'r')
-        self.source_dicts = []
-        for source_dict in source_dicts:
-            self.source_dicts.append(load_dict(source_dict))
-        self.target_dict = load_dict(target_dict)
+            self.datasets = [fopen(fp, 'r') for fp in datasets]
+
+        self.dicts = []
+        for dict_ in dicts:
+            self.dicts.append(load_dict(dict_))
 
         self.batch_size = batch_size
         self.maxlen = maxlen
         self.skip_empty = skip_empty
-        self.use_factor = use_factor
+        self.factors = factors
+        self.outputs = outputs
 
-        self.n_words_source = n_words_source
-        self.n_words_target = n_words_target
+        assert len(datasets) == 1 + outputs, 'Datasets and dictionaries mismatch'
 
-        if self.n_words_source > 0:
-            for d in self.source_dicts:
+        self.n_words_dicts = n_words_dicts
+
+        if self.n_words_dicts:
+            for d, max_ in zip(self.dicts, self.n_words_dicts):
                 for key, idx in d.items():
-                    if idx >= self.n_words_source:
+                    if idx >= max_:
                         del d[key]
-
-        if self.n_words_target > 0:
-                for key, idx in self.target_dict.items():
-                    if idx >= self.n_words_target:
-                        del self.target_dict[key]
 
         self.shuffle = shuffle_each_epoch
         self.sort_by_length = sort_by_length
 
-        self.source_buffer = []
-        self.target_buffer = []
+        self.buffers = [[] for _ in range(len(datasets))]
         self.k = batch_size * maxibatch_size
-        
 
         self.end_of_data = False
 
@@ -72,10 +66,10 @@ class TextIterator:
     
     def reset(self):
         if self.shuffle:
-            self.source, self.target = shuffle.main([self.source_orig, self.target_orig], temporary=True)
+            self.datasets = shuffle.main(self.datasets_orig, temporary=True)
         else:
-            self.source.seek(0)
-            self.target.seek(0)
+            for dataset in self.datasets:
+                dataset.seek(0)
 
     def next(self):
         if self.end_of_data:
@@ -83,46 +77,44 @@ class TextIterator:
             self.reset()
             raise StopIteration
 
-        source = []
-        target = []
-
+        # creating list of empty for later filling
+        batches = [[] for _ in range(len(self.datasets))]
         # fill buffer, if it's empty
-        assert len(self.source_buffer) == len(self.target_buffer), 'Buffer size mismatch!'
+        len_buffers = [len(buffer) for buffer in self.buffers]
 
-        if len(self.source_buffer) == 0:
-            for ss in self.source:
-                ss = ss.split()
-                tt = self.target.readline().split()
-                
-                if self.skip_empty and (len(ss) == 0 or len(tt) == 0):
-                    continue
-                if len(ss) > self.maxlen or len(tt) > self.maxlen:
-                    continue
+        assert (min(len_buffers) == max(len_buffers)), 'Buffer size mismatch!'
 
-                self.source_buffer.append(ss)
-                self.target_buffer.append(tt)
-                if len(self.source_buffer) == self.k:
-                    break
+        if min(len_buffers) == 0:
+            for sss in zip(*self.datasets): # now the datasets are in a list, parallel iteration with zip()
+                for idx, ss in enumerate(sss):
+                    ss = ss.split()
 
-            if len(self.source_buffer) == 0 or len(self.target_buffer) == 0:
+                    if self.skip_empty and len(ss) == 0:
+                        continue
+                    if len(ss) > self.maxlen:
+                        continue
+
+                    self.buffers[idx].append(ss)
+                    if len(self.buffers[0]) == self.k:
+                        break
+
+            if len(self.buffers[0]) == 0:
                 self.end_of_data = False
                 self.reset()
                 raise StopIteration
 
             # sort by target buffer
             if self.sort_by_length:
-                tlen = numpy.array([len(t) for t in self.target_buffer])
+                tlen = numpy.array([len(t) for t in self.buffers[1]])
                 tidx = tlen.argsort()
 
-                _sbuf = [self.source_buffer[i] for i in tidx]
-                _tbuf = [self.target_buffer[i] for i in tidx]
-
-                self.source_buffer = _sbuf
-                self.target_buffer = _tbuf
+                for idx, buffer in enumerate(self.buffers):
+                    _buf = [buffer[i] for i in tidx]
+                    self.buffers[idx] = _buf
 
             else:
-                self.source_buffer.reverse()
-                self.target_buffer.reverse()
+                for buffer in self.buffers:
+                    buffer.reverse()
 
 
         try:
@@ -130,33 +122,30 @@ class TextIterator:
             while True:
 
                 # read from source file and map to word index
-                try:
-                    ss = self.source_buffer.pop()
-                except IndexError:
-                    break
-                tmp = []
-                for w in ss:
-                    if self.use_factor:
-                        w = [self.source_dicts[i][f] if f in self.source_dicts[i] else 1 for (i,f) in enumerate(w.split('|'))]
-                    else:
-                        w = [self.source_dicts[0][w] if w in self.source_dicts[0] else 1]
-                    tmp.append(w)
-                ss = tmp
+                for idx, buffer in enumerate(self.buffers):
+                    try:
+                        ss = buffer.pop()
+                    except IndexError:
+                        break
+                    tmp = []
+                    for w in ss:
+                        if idx == 0:
+                            if self.factors > 1:
+                                w = [self.dicts[i][f] if f in self.dicts[i] else 1 for (i,f) in enumerate(w.split('|'))]
+                            else:
+                                w = [self.dicts[idx][w] if w in self.dicts[idx + self.factors - 1] else 1]
+                            tmp.append(w)
+                        else:
+                            w = [self.dicts[idx][w] if w in self.dicts[idx+self.factors-1] else 1]
+                            tmp.extend(w)
+                    ss = tmp
 
-                # read from source file and map to word index
-                tt = self.target_buffer.pop()
-                tt = [self.target_dict[w] if w in self.target_dict else 1
-                      for w in tt]
-                if self.n_words_target > 0:
-                    tt = [w if w < self.n_words_target else 1 for w in tt]
+                    batches[idx].append(ss)
+                len_batches = [len(batch) for batch in batches]
 
-                source.append(ss)
-                target.append(tt)
-
-                if len(source) >= self.batch_size or \
-                        len(target) >= self.batch_size:
+                if any(x > self.batch_size for x in len_batches):
                     break
         except IOError:
             self.end_of_data = True
 
-        return source, target
+        return batches
