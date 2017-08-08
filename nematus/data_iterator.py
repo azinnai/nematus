@@ -86,15 +86,17 @@ class TextIterator:
 
         if min(len_buffers) == 0:
             for sss in zip(*self.datasets): # now the datasets are in a list, parallel iteration with zip()
+                # forcing same length over buffers
+                new_sss = []
                 for idx, ss in enumerate(sss):
                     ss = ss.split()
-
                     if self.skip_empty and len(ss) == 0:
                         break
                     if len(ss) > self.maxlen:
                         break
-
-                    self.buffers[idx].append(ss)
+                    new_sss.append(ss)
+                if len(new_sss) == len(self.buffers):
+                    [self.buffers[idx].append(ss) for idx, ss in enumerate(new_sss)]
 
                 if len(self.buffers[0]) == self.k:
                     break
@@ -106,7 +108,7 @@ class TextIterator:
 
             print len(self.buffers)
             print [len(x) for x in self.buffers]
-            
+
             # sort by target buffer
             if self.sort_by_length:
                 tlen = numpy.array([len(t) for t in self.buffers[1]])
