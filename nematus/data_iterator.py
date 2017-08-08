@@ -1,4 +1,5 @@
 import numpy
+import time
 
 import gzip
 
@@ -84,7 +85,10 @@ class TextIterator:
 
         assert (min(len_buffers) == max(len_buffers)), 'Buffer size mismatch!'
 
+
         if min(len_buffers) == 0:
+            print 'feeding buffer'
+            start = time.time()
             for sss in zip(*self.datasets): # now the datasets are in a list, parallel iteration with zip()
                 # forcing same length over buffers
                 new_sss = []
@@ -118,13 +122,13 @@ class TextIterator:
             else:
                 for buffer in self.buffers:
                     buffer.reverse()
+            print "elapsed time: {}".format(time.time()-start)
 
-
+        start = time.time()
         try:
             # actual work here
             buffer_empty = False
             while not buffer_empty:
-
                 # read from source file and map to word index
                 for idx, buffer in enumerate(self.buffers):
                     try:
@@ -154,5 +158,5 @@ class TextIterator:
         except IOError:
             self.end_of_data = True
 
-        print 'returned'
+        print 'returned in {}'.format(start-time.time())
         return batches
