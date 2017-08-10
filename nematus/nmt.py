@@ -540,12 +540,13 @@ def build_sampler(tparams, options, use_noise, trng, return_alignment=False):
         init_state.tag.test_value = numpy.random.rand(*init_state_old.tag.test_value.shape).astype(floatX)
 
     outs = []
-    inps = []
+    inps = [ctx, init_state]
+    f_next = []
     for decoder_idx in range(options['outputs']):
         decoder_idx = str(decoder_idx)
 
         # x: 1 x 1
-        y = tensor.vector('y_sampler', dtype='int64')
+        y = tensor.vector(pp('y_sampler', decoder_idx), dtype='int64')
         y.tag.test_value = -1 * numpy.ones((10,)).astype('int64')
 
         logit, opt_ret, ret_state = build_decoder(tparams, options, y, ctx, init_state, dropout, x_mask=None, y_mask=None, decoder_idx=decoder_idx, sampling=True)
@@ -558,19 +559,14 @@ def build_sampler(tparams, options, use_noise, trng, return_alignment=False):
 
         # compile a function to do the whole thing above, next word probability,
         # sampled word for the next target, next hidden state to be used
-        outs.extend([next_probs, next_sample, ret_state])
+        outs = [next_probs, next_sample, ret_state]
 
         if return_alignment:
             outs.append(opt_ret['dec_alphas'])
-        inps.append(y)
 
-    inps.extend([ctx, init_state])
-
-    logging.info('Building f_next..')
-
-    f_next = theano.function(inps, outs, name='f_next', profile=profile)
-
-    logging.info('Done')
+        logging.info('Building {}..'.format(pp('f_next', decoder_idx)))
+        f_next.append(theano.function(inps+y, outs, name=pp('f_next', decoder_idx), profile=profile))
+        logging.info('Done')
 
     return f_init, f_next
 
@@ -723,7 +719,7 @@ def build_full_sampler(tparams, options, use_noise, trng, greedy=False):
 # this function iteratively calls f_init and f_next functions.
 def gen_sample(f_init, f_next, x, trng=None, k=1, maxlen=30,
                stochastic=True, argmax=False, return_alignment=False, suppress_unk=False,
-               return_hyp_graph=False):
+               return_hyp_graph=False, outputs=1):
 
     # k is the beam size we have
     if k > 1 and argmax:
@@ -760,8 +756,8 @@ def gen_sample(f_init, f_next, x, trng=None, k=1, maxlen=30,
     num_models = len(f_init)
     next_state = [None]*num_models
     ctx0 = [None]*num_models
-    next_p = [None]*num_models
-    dec_alphas = [None]*num_models
+    next_p = [[None]*outputs]*num_models
+    dec_alphas = [[None]*outputs]*num_models
     # get initial state of decoder rnn and encoder context
     for i in xrange(num_models):
         ret = f_init[i](x)
@@ -774,6 +770,7 @@ def gen_sample(f_init, f_next, x, trng=None, k=1, maxlen=30,
     next_w = -1 * numpy.ones((live_k,)).astype('int64')  # bos indicator
 
     # x is a sequence of word ids followed by 0, eos id
+    # sampling using only the decoder for the translation task
     for ii in xrange(maxlen):
         for i in xrange(num_models):
             ctx = numpy.tile(ctx0[i], [live_k, 1])
@@ -782,7 +779,7 @@ def gen_sample(f_init, f_next, x, trng=None, k=1, maxlen=30,
             next_state[i] = numpy.transpose(next_state[i], (1,0,2))
 
             inps = [next_w, ctx, next_state[i]]
-            ret = f_next[i](*inps)
+            ret = f_next[i][0](*inps)
 
             # dimension of dec_alpha (k-beam-size, number-of-input-hidden-units)
             next_p[i], next_w_tmp, next_state[i] = ret[0], ret[1], ret[2]
@@ -803,7 +800,7 @@ def gen_sample(f_init, f_next, x, trng=None, k=1, maxlen=30,
                 if nw == 0:
                     break
             else:
-                #FIXME: sampling is currently performed according to the last model only
+                # FIXME: sampling is currently performed according to the last model only
                 nws = next_w_tmp
                 cand_scores = numpy.array(hyp_scores)[:, None] - numpy.log(next_p[-1])
                 probs = next_p[-1]
@@ -823,7 +820,7 @@ def gen_sample(f_init, f_next, x, trng=None, k=1, maxlen=30,
                 new_hyp_scores=[]
                 new_word_probs=[]
                 for hyp_sample,hyp_state, hyp_score, hyp_word_prob in zip(hyp_samples,hyp_states,hyp_scores, word_probs):
-                    if hyp_sample[-1]  > 0:
+                    if hyp_sample[-1] > 0:
                         new_hyp_samples.append(copy.copy(hyp_sample))
                         new_hyp_states.append(copy.copy(hyp_state))
                         new_hyp_scores.append(hyp_score)
@@ -1318,6 +1315,7 @@ def train(dim_word=512,  # word vector dimensionality
     last_words = 0
     ud_start = time.time()
     p_validation = None
+
     for training_progress.eidx in xrange(training_progress.eidx, max_epochs):
         n_samples = 0
 
@@ -1345,6 +1343,7 @@ def train(dim_word=512,  # word vector dimensionality
                 cost_batches += 1
                 last_disp_samples += xlen
                 last_words_tmp = 0
+
                 for idx in range(1, len(batch), 2):
                     last_words_tmp += numpy.sum(batch[idx])
 
@@ -1494,10 +1493,11 @@ def train(dim_word=512,  # word vector dimensionality
             # generate some samples with the model and display them
             if sampleFreq and numpy.mod(training_progress.uidx, sampleFreq) == 0:
                 # FIXME: random selection?
+                # sampling just from the first decoder
                 x = batch[0]
                 x_mask = batch[1]
-                y = batch[2::2]
-                y_mask = batch[3::2]
+                y = batch[2]
+                y_mask = batch[3]
                 for jj in xrange(numpy.minimum(5, x.shape[2])):
                     stochastic = True
                     x_current = x[:, :, jj][:, :, None]
@@ -1512,7 +1512,8 @@ def train(dim_word=512,  # word vector dimensionality
                                                stochastic=stochastic,
                                                argmax=False,
                                                suppress_unk=False,
-                                               return_hyp_graph=False)
+                                               return_hyp_graph=False,
+                                               outputs=outputs)
                     print 'Source ', jj, ': ',
                     for pos in range(x.shape[1]):
                         if x[0, pos, jj] == 0:
