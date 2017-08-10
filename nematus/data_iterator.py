@@ -74,6 +74,7 @@ class TextIterator:
 
     def next(self):
         if self.end_of_data:
+            print 'end_of_data, resetting data'
             self.end_of_data = False
             self.reset()
             raise StopIteration
@@ -82,6 +83,7 @@ class TextIterator:
         batches = [[] for _ in range(len(self.datasets))]
         # fill buffer, if it's empty
         len_buffers = [len(buffer) for buffer in self.buffers]
+        print 'len_buffers pre: ', len_buffers
 
         assert (min(len_buffers) == max(len_buffers)), 'Buffer size mismatch!'
 
@@ -94,11 +96,15 @@ class TextIterator:
                 new_sss = []
                 for idx, ss in enumerate(sss):
                     ss = ss.split()
-                    if self.skip_empty and len(ss) == 0:
+                    # skip only if source sentence is empty
+                    if self.skip_empty and len(ss) == 0 and idx == 0:
                         break
-                    if len(ss) > self.maxlen:
+                    if len(ss) > self.maxlen and idx == 0:
                         break
                     new_sss.append(ss)
+
+                # check all buffers have been filled.
+
                 if len(new_sss) == len(self.buffers):
                     [self.buffers[idx].append(ss) for idx, ss in enumerate(new_sss)]
 
@@ -106,6 +112,7 @@ class TextIterator:
                     break
 
             if len(self.buffers[0]) == 0:
+                print 'buffers empty, resetting data'
                 self.end_of_data = False
                 self.reset()
                 raise StopIteration
@@ -127,14 +134,13 @@ class TextIterator:
         start = time.time()
         try:
             # actual work here
-            buffer_empty = False
-            while not buffer_empty:
+            while True:
                 # read from source file and map to word index
+                sss = []
                 for idx, buffer in enumerate(self.buffers):
                     try:
                         ss = buffer.pop()
                     except IndexError:
-                        buffer_empty = True
                         break
                     tmp = []
                     for w in ss:
@@ -148,15 +154,23 @@ class TextIterator:
                             w = [self.dicts[idx][w] if w in self.dicts[idx] else 1]
                             tmp.extend(w)
                     ss = tmp
-                    batches[idx].append(ss)
+                    sss.append(ss)
+
+                if len(sss) == len(batches):
+                    [batches[idx].append(ss) for idx, ss in enumerate(sss)]
+                else:
+                    break
 
                 len_batches = [len(batch) for batch in batches]
 
                 if any(x > self.batch_size for x in len_batches):
                     break
 
-        except IOError:
+        except IOError as e:
+            print 'IOError: ', e
             self.end_of_data = True
 
-        print 'returned in {}'.format(start-time.time())
+        len_buffers = [len(buffer) for buffer in self.buffers]
+        print 'len_buffer after: ', len_buffers
+        print 'returned in {}'.format(time.time()-start)
         return batches
