@@ -565,8 +565,8 @@ def build_sampler(tparams, options, use_noise, trng, return_alignment=False):
             outs.append(opt_ret['dec_alphas'])
 
         logging.info('Building {}..'.format(pp('f_next', decoder_idx)))
-    	tmp_inps = inps + [y]
-	f_next.append(theano.function(tmp_inps, outs, name=pp('f_next', decoder_idx), profile=profile))
+        tmp_inps = [y] + inps
+        f_next.append(theano.function(tmp_inps, outs, name=pp('f_next', decoder_idx), profile=profile))
         logging.info('Done')
 
     return f_init, f_next
@@ -780,7 +780,7 @@ def gen_sample(f_init, f_next, x, trng=None, k=1, maxlen=30,
             next_state[i] = numpy.transpose(next_state[i], (1,0,2))
 
             inps = [next_w, ctx, next_state[i]]
-            ret = f_next[i][0](*inps)
+            ret = f_next[i][-1](*inps)
 
             # dimension of dec_alpha (k-beam-size, number-of-input-hidden-units)
             next_p[i], next_w_tmp, next_state[i] = ret[0], ret[1], ret[2]
