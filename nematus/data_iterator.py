@@ -6,10 +6,12 @@ import gzip
 import shuffle
 from util import load_dict
 
+
 def fopen(filename, mode='r'):
     if filename.endswith('.gz'):
         return gzip.open(filename, mode)
     return open(filename, mode)
+
 
 class TextIterator:
     """Simple Multitext iterator."""
@@ -74,7 +76,6 @@ class TextIterator:
 
     def next(self):
         if self.end_of_data:
-            print 'end_of_data, resetting data'
             self.end_of_data = False
             self.reset()
             raise StopIteration
@@ -83,17 +84,13 @@ class TextIterator:
         batches = [[] for _ in range(len(self.datasets))]
         # fill buffer, if it's empty
         len_buffers = [len(buffer) for buffer in self.buffers]
-        print 'len_buffers pre: ', len_buffers
 
         assert (min(len_buffers) == max(len_buffers)), 'Buffer size mismatch!'
 
-
         if min(len_buffers) == 0:
-            print 'feeding buffer'
-            start = time.time()
 
-            for ss in self.datasets[0]: # now the datasets are in a list, parallel iteration with zip()
-                # forcing same length over buffers
+            for ss in self.datasets[0]:
+
                 sss = []
                 ss = ss.split()
                 sss.append(ss)
@@ -110,7 +107,6 @@ class TextIterator:
                     break
 
             if len(self.buffers[0]) == 0:
-                print 'buffers empty, resetting data'
                 self.end_of_data = False
                 self.reset()
                 raise StopIteration
@@ -127,9 +123,7 @@ class TextIterator:
             else:
                 for buffer in self.buffers:
                     buffer.reverse()
-            print "elapsed time: {}".format(time.time()-start)
 
-        start = time.time()
         try:
             # actual work here
             while True:
@@ -164,11 +158,7 @@ class TextIterator:
                 if any(x > self.batch_size for x in len_batches):
                     break
 
-        except IOError as e:
-            print 'IOError: ', e
+        except IOError:
             self.end_of_data = True
 
-        len_buffers = [len(buffer) for buffer in self.buffers]
-        print 'len_buffer after: ', len_buffers
-        print 'returned in {}'.format(time.time()-start)
         return batches

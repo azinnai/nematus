@@ -1166,9 +1166,6 @@ def train(dim_word=512,  # word vector dimensionality
                          factors=factors,
                          outputs=outputs,
                          maxibatch_size=maxibatch_size)
-        while True:
-            for batch in train:
-                continue
 
     if valid_datasets and validFreq:
         valid = TextIterator(valid_datasets,
