@@ -91,22 +91,20 @@ class TextIterator:
         if min(len_buffers) == 0:
             print 'feeding buffer'
             start = time.time()
-            for sss in zip(*self.datasets): # now the datasets are in a list, parallel iteration with zip()
+
+            for ss in self.datasets[0]: # now the datasets are in a list, parallel iteration with zip()
                 # forcing same length over buffers
-                new_sss = []
-                for idx, ss in enumerate(sss):
-                    ss = ss.split()
-                    # skip only if source sentence is empty
-                    if self.skip_empty and len(ss) == 0 and idx == 0:
-                        break
-                    if len(ss) > self.maxlen and idx == 0:
-                        break
-                    new_sss.append(ss)
+                sss = []
+                ss = ss.split()
+                sss.append(ss)
+                sss.extend([target.readline().split for target in self.datasets[1:]])
 
-                # check all buffers have been filled.
+                if self.skip_empty and len(ss) == 0:
+                    continue
+                if len(ss) > self.maxlen:
+                    continue
 
-                if len(new_sss) == len(self.buffers):
-                    [self.buffers[idx].append(ss) for idx, ss in enumerate(new_sss)]
+                [self.buffers[idx].append(ss) for idx, ss in enumerate(sss)]
 
                 if len(self.buffers[0]) == self.k:
                     break
