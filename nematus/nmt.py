@@ -1002,7 +1002,7 @@ def train(dim_word=512,  # word vector dimensionality
           map_decay_c=0., # L2 regularization penalty towards original weights
           clip_c=-1.,  # gradient clipping threshold
           lrate=0.0001,  # learning rate
-          n_words=[None],  # list of vocabulary size
+          n_words=[None],  # list of vocabulary size, one size per all source dictionaries, one per each target dictionary
           maxlen=100,  # maximum length of the description
           optimizer='adam',
           batch_size=16,
@@ -1067,6 +1067,7 @@ def train(dim_word=512,  # word vector dimensionality
 
     assert(len(dictionaries) == factors + outputs) # one dictionary per source and target
     assert(len(datasets) == outputs + 1) # one dataset per output
+    assert(len(n_words) == outputs + 1) # one dict len per sources, one per each target
     assert(len(model_options['dim_per_factor']) == factors) # each factor embedding has its own dimensionality
     assert(sum(model_options['dim_per_factor']) == model_options['dim_word']) # dimensionality of factor embeddings sums up to total dimensionality of input embedding vector
     assert(prior_model != None and (os.path.exists(prior_model)) or (map_decay_c==0.0)) # MAP training requires a prior model file
@@ -1494,11 +1495,11 @@ def train(dim_word=512,  # word vector dimensionality
             # generate some samples with the model and display them
             if sampleFreq and numpy.mod(training_progress.uidx, sampleFreq) == 0:
                 # FIXME: random selection?
-                # sampling just from the first decoder
+                # sampling just from the last decoder, the main translation task
                 x = batch[0]
                 x_mask = batch[1]
-                y = batch[2]
-                y_mask = batch[3]
+                y = batch[-2]
+                y_mask = batch[-1]
                 for jj in xrange(numpy.minimum(5, x.shape[2])):
                     stochastic = True
                     x_current = x[:, :, jj][:, :, None]

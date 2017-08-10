@@ -160,9 +160,10 @@ class Translator(object):
         word_idicts = []
         for dictionary in dictionaries_source:
             word_dict = load_dict(dictionary)
-            if self._options[0]['n_words_src']:
+            # n_words is a list containing the max len of each dictionary
+            if self._options[0]['n_words'][0]:
                 for key, idx in word_dict.items():
-                    if idx >= self._options[0]['n_words_src']:
+                    if idx >= self._options[0]['n_words'][0]:
                         del word_dict[key]
             word_idict = dict()
             for kk, vv in word_dict.iteritems():
