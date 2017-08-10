@@ -97,7 +97,7 @@ class TextIterator:
                 sss = []
                 ss = ss.split()
                 sss.append(ss)
-                sss.extend([target.readline().split for target in self.datasets[1:]])
+                sss.extend([target.readline().split() for target in self.datasets[1:]])
 
                 if self.skip_empty and len(ss) == 0:
                     continue
