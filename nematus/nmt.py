@@ -565,7 +565,8 @@ def build_sampler(tparams, options, use_noise, trng, return_alignment=False):
             outs.append(opt_ret['dec_alphas'])
 
         logging.info('Building {}..'.format(pp('f_next', decoder_idx)))
-        f_next.append(theano.function(inps+y, outs, name=pp('f_next', decoder_idx), profile=profile))
+    	tmp_inps = inps + [y]
+	f_next.append(theano.function(tmp_inps, outs, name=pp('f_next', decoder_idx), profile=profile))
         logging.info('Done')
 
     return f_init, f_next
