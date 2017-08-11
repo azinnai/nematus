@@ -126,12 +126,12 @@ def param_init_fflayer(options, params, prefix='ff', nin=None, nout=None,
     if options['layer_normalisation'] and not followed_by_softmax:
         scale_add = 0.0
         scale_mul = 1.0
-        params[pp(prefix,'ln_b')] = scale_add * numpy.ones((1*nout)).astype(floatX)
-        params[pp(prefix,'ln_s')] = scale_mul * numpy.ones((1*nout)).astype(floatX)
+        params[pp(prefix, 'ln_b')] = scale_add * numpy.ones((1*nout)).astype(floatX)
+        params[pp(prefix, 'ln_s')] = scale_mul * numpy.ones((1*nout)).astype(floatX)
 
     if options['weight_normalisation'] and not followed_by_softmax:
         scale_mul = 1.0
-        params[pp(prefix,'W_wns')] = scale_mul * numpy.ones((1*nout)).astype(floatX)
+        params[pp(prefix, 'W_wns')] = scale_mul * numpy.ones((1*nout)).astype(floatX)
 
     return params
 

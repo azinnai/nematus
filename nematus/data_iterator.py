@@ -1,5 +1,4 @@
 import numpy
-import time
 
 import gzip
 
@@ -113,7 +112,7 @@ class TextIterator:
 
             # sort by target buffer
             if self.sort_by_length:
-                tlen = numpy.array([len(t) for t in self.buffers[1]])
+                tlen = numpy.array([len(t) for t in self.buffers[-1]])
                 tidx = tlen.argsort()
 
                 for idx, buffer in enumerate(self.buffers):

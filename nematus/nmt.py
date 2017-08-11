@@ -503,7 +503,7 @@ def build_model(tparams, options):
         if decoder_idx == '0':
             cost = cost_dec
         else:
-            cost+=cost_dec
+            cost += cost_dec
 
     return trng, use_noise, inps, opt_ret, cost
 
@@ -539,7 +539,6 @@ def build_sampler(tparams, options, use_noise, trng, return_alignment=False):
     if theano.config.compute_test_value != 'off':
         init_state.tag.test_value = numpy.random.rand(*init_state_old.tag.test_value.shape).astype(floatX)
 
-    outs = []
     inps = [ctx, init_state]
     f_next = []
     for decoder_idx in range(options['outputs']):
@@ -718,9 +717,10 @@ def build_full_sampler(tparams, options, use_noise, trng, greedy=False):
 
 # generate sample, either with stochastic sampling or beam search. Note that,
 # this function iteratively calls f_init and f_next functions.
+# In the case of multi-output it will sample only from the last decoder.
 def gen_sample(f_init, f_next, x, trng=None, k=1, maxlen=30,
                stochastic=True, argmax=False, return_alignment=False, suppress_unk=False,
-               return_hyp_graph=False, outputs=1):
+               return_hyp_graph=False):
 
     # k is the beam size we have
     if k > 1 and argmax:
@@ -757,8 +757,8 @@ def gen_sample(f_init, f_next, x, trng=None, k=1, maxlen=30,
     num_models = len(f_init)
     next_state = [None]*num_models
     ctx0 = [None]*num_models
-    next_p = [[None]*outputs]*num_models
-    dec_alphas = [[None]*outputs]*num_models
+    next_p = [None]*num_models
+    dec_alphas = [None]*num_models
     # get initial state of decoder rnn and encoder context
     for i in xrange(num_models):
         ret = f_init[i](x)
@@ -1100,10 +1100,10 @@ def train(dim_word=512,  # word vector dimensionality
         n_words = [len(dict_) for dict_ in worddicts]
         model_options['n_words'] = n_words
 
-    # actually I don't know how to modiify the tie embeddings
+    # all the words dicts must be equal.
     if tie_encoder_decoder_embeddings:
-        assert (n_words_src == n_words), "When tying encoder and decoder embeddings, source and target vocabulary size must the same"
-        if worddicts_source[0] != worddicts_target[1]:
+        assert (min(n_words) == max(n_words)), "When tying encoder and decoder embeddings, source and target vocabulary size must the same"
+        if any(worddicts[0] != worddict for worddict in worddicts[1:]):
             logging.warning("Encoder-decoder embedding tying is enabled with different source and target dictionaries. This is usually a configuration error")
 
     if model_options['objective'] == 'MRT':
@@ -1514,8 +1514,7 @@ def train(dim_word=512,  # word vector dimensionality
                                                stochastic=stochastic,
                                                argmax=False,
                                                suppress_unk=False,
-                                               return_hyp_graph=False,
-                                               outputs=outputs)
+                                               return_hyp_graph=False)
                     print 'Source ', jj, ': ',
                     for pos in range(x.shape[1]):
                         if x[0, pos, jj] == 0:
@@ -1661,10 +1660,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     data = parser.add_argument_group('data sets; model loading and saving')
-    data.add_argument('--datasets', type=str, required=True, metavar='PATH', nargs=2,
-                         help="parallel training corpus (source and target)")
+    data.add_argument('--datasets', type=str, required=True, metavar='PATH', nargs='+',
+                         help="parallel training corpus (source and (multiple) target)")
     data.add_argument('--dictionaries', type=str, required=True, metavar='PATH', nargs="+",
-                         help="network vocabularies (one per source factor, plus target vocabulary)")
+                         help="network vocabularies (one per source factor, plus one per target vocabulary)")
     data.add_argument('--model', type=str, default='model.npz', metavar='PATH', dest='saveto',
                          help="model file name (default: %(default)s)")
     data.add_argument('--saveFreq', type=int, default=30000, metavar='INT',
@@ -1681,9 +1680,7 @@ if __name__ == '__main__':
                          help="embedding layer size (default: %(default)s)")
     network.add_argument('--dim', type=int, default=1000, metavar='INT',
                          help="hidden layer size (default: %(default)s)")
-    network.add_argument('--n_words_src', type=int, default=None, metavar='INT',
-                         help="source vocabulary size (default: %(default)s)")
-    network.add_argument('--n_words', type=int, default=None, metavar='INT',
+    network.add_argument('--n_words', type=int, default=None, metavar='INT', nargs='+',
                          help="target vocabulary size (default: %(default)s)")
     network.add_argument('--enc_depth', type=int, default=1, metavar='INT',
                          help="number of encoder layers (default: %(default)s)")
@@ -1704,6 +1701,8 @@ if __name__ == '__main__':
 
     network.add_argument('--factors', type=int, default=1, metavar='INT',
                          help="number of input factors (default: %(default)s)")
+    network.add_argument('--outputs', type=int, default=1, metavar='INT',
+                         help="number of outputs (decoders) (default: %(default)s)")
     network.add_argument('--dim_per_factor', type=int, default=None, nargs='+', metavar='INT',
                          help="list of word vector dimensionalities (one per factor): '--dim_per_factor 250 200 50' for total dimensionality of 500 (default: %(default)s)")
     network.add_argument('--use_dropout', action="store_true",
@@ -1768,7 +1767,7 @@ if __name__ == '__main__':
                          help="truncate BPTT gradients in the encoder to this value. Use -1 for no truncation (default: %(default)s)")
 
     validation = parser.add_argument_group('validation parameters')
-    validation.add_argument('--valid_datasets', type=str, default=None, metavar='PATH', nargs=2,
+    validation.add_argument('--valid_datasets', type=str, default=None, metavar='PATH', nargs='+',
                          help="parallel validation corpus (source and target) (default: %(default)s)")
     validation.add_argument('--valid_batch_size', type=int, default=80, metavar='INT',
                          help="validation minibatch size (default: %(default)s)")
