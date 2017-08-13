@@ -1337,7 +1337,7 @@ def train(dim_word=512,  # word vector dimensionality
 
                 batch = prepare_data(batch, maxlen=maxlen, n_factors=factors)
 
-                if batch[0] is None:
+                if batch is None:
                     logging.warning('Minibatch with zero sample under length %d' % maxlen)
                     training_progress.uidx -= 1
                     continue
