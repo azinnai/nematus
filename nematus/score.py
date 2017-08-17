@@ -50,6 +50,8 @@ def rescore_model(source_file, target_file, saveto, models, options, b, normaliz
 
     trng = RandomStreams(1234)
     datasets = [source_file.name, target_file.name]
+    dictionaries = [options[0]['dictionaries'][0], options[0]['dictionaries'][-1]]
+    n_words = [options[0]['n_words'][0], options[0]['n_words'][-1]]
     def _score(pairs, alignweights=False):
         # sample given an input sequence and obtain scores
         scores = []
@@ -63,12 +65,12 @@ def rescore_model(source_file, target_file, saveto, models, options, b, normaliz
         return scores, alignments
 
     pairs = TextIterator(datasets,
-                        options[0]['dictionaries'],
-                     n_words_dicts=options[0]['n_words'],
+                        dictionaries,
+                     n_words_dicts=n_words,
                      batch_size=b,
                      maxlen=float('inf'),
                      factors=options[0]['factors'],
-                     outputs=options[0]['outputs'],
+                     outputs=1,
                      sort_by_length=False) #TODO: sorting by length could be more efficient, but we'd want to resort after
 
     scores, alignments = _score(pairs, alignweights)
