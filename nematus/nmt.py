@@ -476,7 +476,13 @@ def build_model(tparams, options, scoring=False):
         init_state = tensor.tile(init_state, (options['dec_depth'], 1, 1))
 
     inps = [x, x_mask]
-    for decoder_idx in range(options['outputs']):
+
+    if scoring:
+        start = options['outputs'] - 1
+    else:
+        start = 0
+
+    for decoder_idx in range(start, options['outputs']):
         decoder_idx = str(decoder_idx)
 
         y = tensor.matrix(pp('y', decoder_idx), dtype='int64')
@@ -505,8 +511,7 @@ def build_model(tparams, options, scoring=False):
             cost = cost_dec
         else:
             cost += cost_dec
-        if scoring:
-            cost = cost_dec
+
     return trng, use_noise, inps, opt_ret, cost
 
 
