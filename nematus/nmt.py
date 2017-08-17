@@ -438,7 +438,7 @@ def build_decoder(tparams, options, y, ctx, init_state, dropout, x_mask=None, y_
     return logit, opt_ret, ret_state
 
 # build a training model
-def build_model(tparams, options):
+def build_model(tparams, options, scoring=False):
 
     trng = RandomStreams(1234)
     use_noise = theano.shared(numpy_floatX(0.))
@@ -500,11 +500,13 @@ def build_model(tparams, options):
 
         inps.append(y)
         inps.append(y_mask)
+
         if decoder_idx == '0':
             cost = cost_dec
         else:
             cost += cost_dec
-
+        if scoring:
+            cost = cost_dec
     return trng, use_noise, inps, opt_ret, cost
 
 

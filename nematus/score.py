@@ -30,11 +30,11 @@ def load_scorer(model, option, alignweights=None):
     tparams = init_theano_params(params)
 
     trng, use_noise, \
-        x, x_mask, y, y_mask, \
+        inps, \
         opt_ret, \
         cost = \
-        build_model(tparams, option)
-    inps = [x, x_mask, y, y_mask]
+        build_model(tparams, option, scoring=True)
+    #inps = [x, x_mask, y, y_mask]
     use_noise.set_value(0.)
 
     if alignweights:
@@ -49,7 +49,7 @@ def load_scorer(model, option, alignweights=None):
 def rescore_model(source_file, target_file, saveto, models, options, b, normalization_alpha, verbose, alignweights):
 
     trng = RandomStreams(1234)
-
+    datasets = [source_file.name, target_file.name]
     def _score(pairs, alignweights=False):
         # sample given an input sequence and obtain scores
         scores = []
@@ -62,12 +62,13 @@ def rescore_model(source_file, target_file, saveto, models, options, b, normaliz
 
         return scores, alignments
 
-    pairs = TextIterator(source_file.name, target_file.name,
-                    options[0]['dictionaries'][:-1], options[0]['dictionaries'][-1],
-                     n_words_source=options[0]['n_words_src'], n_words_target=options[0]['n_words'],
+    pairs = TextIterator(datasets,
+                        options[0]['dictionaries'],
+                     n_words_dicts=options[0]['n_words'],
                      batch_size=b,
                      maxlen=float('inf'),
-                     use_factor=(options[0]['factors'] > 1),
+                     factors=options[0]['factors'],
+                     outputs=options[0]['outputs'],
                      sort_by_length=False) #TODO: sorting by length could be more efficient, but we'd want to resort after
 
     scores, alignments = _score(pairs, alignweights)
