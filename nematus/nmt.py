@@ -492,7 +492,7 @@ def build_model(tparams, options, scoring=False):
         y_mask.tag.test_value = numpy.ones(shape=(8, 10)).astype(floatX)
         y_flat = y.flatten()
         #da capire un'attimo la cosa del vocabolario!
-        y_flat_idx = tensor.arange(y_flat.shape[0]) * options['n_words'][options['factors']+decoder_idx] + y_flat
+        y_flat_idx = tensor.arange(y_flat.shape[0]) * options['n_words'][options['factors']+int(decoder_idx)] + y_flat
 
         logit, opt_ret, _ = build_decoder(tparams, options, y, ctx, init_state, dropout, x_mask=x_mask, y_mask=y_mask, decoder_idx=decoder_idx, sampling=False)
 
