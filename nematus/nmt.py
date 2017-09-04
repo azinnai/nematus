@@ -83,11 +83,12 @@ def init_params(options):
     params = OrderedDict()
 
     # embedding
-    params = get_layer_param('embedding')(options, params, options['n_words'][0], options['dim_per_factor'], options['factors'], suffix='')
+    factors = options['factors']
+    params = get_layer_param('embedding')(options, params, options['n_words'][0], options['dim_per_factor'], factors, suffix='')
     #
     if not options['tie_encoder_decoder_embeddings']:
         for decoder_idx in range(options['outputs']):
-            params = get_layer_param('embedding')(options, params, options['n_words'][decoder_idx+1], options['dim_word'], suffix=pp('_dec', decoder_idx))
+            params = get_layer_param('embedding')(options, params, options['n_words'][decoder_idx+factors], options['dim_word'], suffix=pp('_dec', decoder_idx))
 
     # encoder: bidirectional RNN
     params = get_layer_param(options['encoder'])(options, params,
@@ -130,7 +131,7 @@ def init_params(options):
     if options['decoder_deep'].startswith('lstm'):
         dec_state *= 2
 
-        # init_state, init_cell
+    # init_state, init_cell
 
     params = get_layer_param('ff')(options, params, prefix='ff_state',
                                    nin=ctxdim, nout=dec_state)
@@ -177,7 +178,7 @@ def init_params(options):
         params = get_layer_param('ff')(options, params, prefix=pp('ff_logit', decoder_idx),
                                     nin=options['dim_word'],
                                     nout=options['n_words'][int(decoder_idx)+1],
-                                    weight_matrix = not options['tie_decoder_embeddings'],
+                                    weight_matrix=not options['tie_decoder_embeddings'],
                                     followed_by_softmax=True)
 
     return params
@@ -320,7 +321,7 @@ def build_decoder(tparams, options, y, ctx, init_state, dropout, x_mask=None, y_
     # to the right. This is done because of the bi-gram connections in the
     # readout and decoder rnn. The first target will be all zeros and we will
     # not condition on the last output.
-    decoder_embedding_suffix = '' if options['tie_encoder_decoder_embeddings'] else pp('_dec', decoder_idx)
+    decoder_embedding_suffix = decoder_idx if options['tie_encoder_decoder_embeddings'] else pp('_dec', decoder_idx)
     emb = get_layer_constr('embedding')(tparams, y, suffix=decoder_embedding_suffix)
     if options['use_dropout']:
         emb *= target_dropout
@@ -491,7 +492,7 @@ def build_model(tparams, options, scoring=False):
         y_mask.tag.test_value = numpy.ones(shape=(8, 10)).astype(floatX)
         y_flat = y.flatten()
         #da capire un'attimo la cosa del vocabolario!
-        y_flat_idx = tensor.arange(y_flat.shape[0]) * options['n_words'][-1] + y_flat
+        y_flat_idx = tensor.arange(y_flat.shape[0]) * options['n_words'][options['factors']+decoder_idx] + y_flat
 
         logit, opt_ret, _ = build_decoder(tparams, options, y, ctx, init_state, dropout, x_mask=x_mask, y_mask=y_mask, decoder_idx=decoder_idx, sampling=False)
 
