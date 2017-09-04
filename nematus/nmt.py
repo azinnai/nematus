@@ -507,8 +507,7 @@ def build_model(tparams, options, scoring=False):
 
         inps.append(y)
         inps.append(y_mask)
-
-        if decoder_idx == start:
+        if int(decoder_idx) == start:
             cost = cost_dec
         else:
             cost += cost_dec
