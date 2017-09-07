@@ -42,7 +42,7 @@ from domain_interpolation_data_iterator import DomainInterpolatorTextIterator
 def prepare_data(batch, maxlen=None, n_words_src=30000,
                  n_words=30000, n_factors=1):
 
-    # x: a list of sentences
+    # batch: a list of list of sentences
     if maxlen is not None:
         new_batch = [[] for _ in range(len(batch))]
 
@@ -53,8 +53,8 @@ def prepare_data(batch, maxlen=None, n_words_src=30000,
 
         batch = new_batch
 
-        if any(len(batch) < 1 for batch in batch):
-                return None
+        if any(len(sequence) < 1 for sequence in batch):
+            return None
 
     n_samples = len(batch[0])
     lengths_x = [len(s) for s in batch[0]]

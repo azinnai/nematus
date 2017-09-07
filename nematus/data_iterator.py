@@ -97,7 +97,7 @@ class TextIterator:
 
                 if self.skip_empty and len(ss) == 0:
                     continue
-                if len(ss) > self.maxlen:
+                if any(len(seq) > self.maxlen for seq in sss):
                     continue
 
                 [self.buffers[idx].append(ss) for idx, ss in enumerate(sss)]
