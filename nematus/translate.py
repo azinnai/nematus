@@ -295,7 +295,7 @@ class Translator(object):
         """
         # load theano functionality
         trng, fs_init, fs_next, gen_sample = self._load_models(process_id, device_id)
-
+        num_outputs = len(fs_next[0])
         # listen to queue in while loop, translate items
         while True:
             input_item = self._input_queue.get()
@@ -304,8 +304,10 @@ class Translator(object):
                 break
             idx = input_item.idx
             request_id = input_item.request_id
-
-            output_item = self._translate(process_id, input_item, trng, fs_init, fs_next, gen_sample)
+            output_item = []
+            for ii in xrange(num_outputs):
+                fs_next_tmp = [sublist[ii] for sublist in fs_next]
+                output_item.append(self._translate(process_id, input_item, trng, fs_init, fs_next_tmp, gen_sample))
             self._output_queue.put((request_id, idx, output_item))
 
         return
@@ -451,7 +453,7 @@ class Translator(object):
             samples, scores, word_probs, alignment, hyp_graph = trans
             # n-best list
             if translation_settings.n_best is True:
-                order = numpy.argsort(scores)
+                order = numpy.argsort(scores[-1])
                 n_best_list = []
                 for j in order:
                     current_alignment = None if not translation_settings.get_alignment else alignment[j]

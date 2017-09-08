@@ -1513,15 +1513,9 @@ def train(dim_word=512,  # word vector dimensionality
 
                     # remove padding
                     x_current = x_current[:,:x_mask.astype('int64')[:, jj].sum(),:]
+                    samples = []
+                    scores = []
 
-                    sample, score, sample_word_probs, alignment, hyp_graph = gen_sample([f_init], [f_next],
-                                               x_current,
-                                               trng=trng, k=1,
-                                               maxlen=30,
-                                               stochastic=stochastic,
-                                               argmax=False,
-                                               suppress_unk=False,
-                                               return_hyp_graph=False)
                     print 'Source ', jj, ': ',
                     for pos in range(x.shape[1]):
                         if x[0, pos, jj] == 0:
@@ -1536,30 +1530,42 @@ def train(dim_word=512,  # word vector dimensionality
                                 sys.stdout.write('|')
                             else:
                                 sys.stdout.write(' ')
-                    print
-                    print 'Truth ', jj, ' : ',
-                    for vv in y[:, jj]:
-                        if vv == 0:
-                            break
-                        if vv in worddicts_r[-1]:
-                            print worddicts_r[-1][vv],
+
+                    for ii in xrange(outputs):
+                        sample, score, sample_word_probs, alignment, hyp_graph = gen_sample([f_init], [f_next[ii]],
+                                                   x_current,
+                                                   trng=trng, k=1,
+                                                   maxlen=30,
+                                                   stochastic=stochastic,
+                                                   argmax=False,
+                                                   suppress_unk=False,
+                                                   return_hyp_graph=False)
+
+
+                        print
+                        print 'Truth ', jj, ' output ', ii, ' : ',
+                        for vv in y[:, jj]:
+                            if vv == 0:
+                                break
+                            if vv in worddicts_r[-1]:
+                                print worddicts_r[-1][vv],
+                            else:
+                                print 'UNK',
+                        print
+                        print 'Sample ', jj, ' output ', ii, ': ',
+                        if stochastic:
+                            ss = sample[0]
                         else:
-                            print 'UNK',
-                    print
-                    print 'Sample ', jj, ': ',
-                    if stochastic:
-                        ss = sample[0]
-                    else:
-                        score = score / numpy.array([len(s) for s in sample])
-                        ss = sample[score.argmin()]
-                    for vv in ss:
-                        if vv == 0:
-                            break
-                        if vv in worddicts_r[-1]:
-                            print worddicts_r[-1][vv],
-                        else:
-                            print 'UNK',
-                    print
+                            score = score / numpy.array([len(s) for s in sample])
+                            ss = sample[score.argmin()]
+                        for vv in ss:
+                            if vv == 0:
+                                break
+                            if vv in worddicts_r[-1]:
+                                print worddicts_r[-1][vv],
+                            else:
+                                print 'UNK',
+                        print
 
             # validate model on validation set and early stop if necessary
             if valid is not None and validFreq and numpy.mod(training_progress.uidx, validFreq) == 0:
