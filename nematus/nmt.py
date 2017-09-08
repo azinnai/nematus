@@ -787,7 +787,7 @@ def gen_sample(f_init, f_next, x, trng=None, k=1, maxlen=30,
             next_state[i] = numpy.transpose(next_state[i], (1,0,2))
 
             inps = [next_w, ctx, next_state[i]]
-            ret = f_next[i][-1](*inps)
+            ret = f_next[i](*inps)
 
             # dimension of dec_alpha (k-beam-size, number-of-input-hidden-units)
             next_p[i], next_w_tmp, next_state[i] = ret[0], ret[1], ret[2]
