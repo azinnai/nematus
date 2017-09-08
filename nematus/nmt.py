@@ -76,6 +76,7 @@ def prepare_data(batch, maxlen=None, n_words_src=30000,
         for idx, s_y in enumerate(target_batch):
             batch_out[-2][:lengths_y[idx], idx] = s_y
             batch_out[-1][:lengths_y[idx]+1, idx] = 1.
+
     return batch_out
 
 # initialize all parameters
@@ -1505,8 +1506,8 @@ def train(dim_word=512,  # word vector dimensionality
                 # sampling just from the last decoder, the main translation task
                 x = batch[0]
                 x_mask = batch[1]
-                y = batch[-2]
-                y_mask = batch[-1]
+                y = batch[2::2]
+                y_mask = batch[3::2]
                 for jj in xrange(numpy.minimum(5, x.shape[2])):
                     stochastic = True
                     x_current = x[:, :, jj][:, :, None]
@@ -1544,7 +1545,7 @@ def train(dim_word=512,  # word vector dimensionality
 
                         print
                         print 'Truth ', jj, ' output ', ii, ' : ',
-                        for vv in y[:, jj]:
+                        for vv in y[ii, :, jj]:
                             if vv == 0:
                                 break
                             if vv in worddicts_r[-1]:
