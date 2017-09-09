@@ -1544,7 +1544,7 @@ def train(dim_word=512,  # word vector dimensionality
 
 
                         print 'Truth ', jj, ' output ', ii, ' : ',
-                        for vv in y[ii][ :, jj]:
+                        for vv in y[ii][:, jj]:
                             if vv == 0:
                                 break
                             if vv in worddicts_r[-1]:

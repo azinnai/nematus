@@ -295,7 +295,12 @@ class Translator(object):
         """
         # load theano functionality
         trng, fs_init, fs_next, gen_sample = self._load_models(process_id, device_id)
-        num_outputs = len(fs_next[0])
+        # each model should have the same number of outputs
+        outputs = [int(x['outputs']) for x in self._options]
+
+        assert min(outputs) == max(outputs), 'outputs mismatch between models'
+
+        num_outputs = outputs[0]
         # listen to queue in while loop, translate items
         while True:
             input_item = self._input_queue.get()
@@ -354,7 +359,7 @@ class Translator(object):
         k = input_item.k
         seq = input_item.seq
         max_ratio = input_item.max_ratio
-        
+
         maxlen = 200 #TODO: should be configurable
         if max_ratio:
           maxlen = int(max_ratio * len(seq))
@@ -565,7 +570,12 @@ class Translator(object):
                     self.write_translation(output_file, translation, translation_settings)
         else:
             for translation in translations:
-                self.write_translation(output_file, translation, translation_settings)
+                for output in self._options[0]['outputs']:
+                    if output_file is 'STDOUT':
+                        self.write_translation(output_file, translation[int(output)],
+                                               translation_settings)
+                    else:
+                        self.write_translation(output_file+'.'+output, translation[int(output)], translation_settings)
 
 def main(input_file, output_file, decoder_settings, translation_settings):
     """
