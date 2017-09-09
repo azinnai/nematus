@@ -1516,7 +1516,7 @@ def train(dim_word=512,  # word vector dimensionality
                     x_current = x_current[:,:x_mask.astype('int64')[:, jj].sum(),:]
                     samples = []
                     scores = []
-
+	
                     print 'Source ', jj, ': ',
                     for pos in range(x.shape[1]):
                         if x[0, pos, jj] == 0:
@@ -1543,9 +1543,8 @@ def train(dim_word=512,  # word vector dimensionality
                                                    return_hyp_graph=False)
 
 
-                        print
                         print 'Truth ', jj, ' output ', ii, ' : ',
-                        for vv in y[ii, :, jj]:
+                        for vv in y[ii][ :, jj]:
                             if vv == 0:
                                 break
                             if vv in worddicts_r[-1]:
