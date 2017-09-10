@@ -584,10 +584,11 @@ def main(input_file, output_file, decoder_settings, translation_settings):
     for idx, translations in enumerate(multi_translations):
         # for compatibility with older version of Nematus
         if idx == 0 or output_file is sys.stdout:
-            suffix = ''
+            translator.write_translations(output_file + suffix, translations, translation_settings)
         else:
-            suffix = '.' + str(idx)
-        translator.write_translations(output_file+suffix, translations, translation_settings)
+            additional_output_file = open(output_file.name+'.'+str(idx))
+            translator.write_translations(additional_output_file, translations, translation_settings)
+            additional_output_file.close()
 
     logging.info('Done')
     translator.shutdown()
