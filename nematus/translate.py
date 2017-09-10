@@ -586,7 +586,7 @@ def main(input_file, output_file, decoder_settings, translation_settings):
         if idx == 0 or output_file is sys.stdout:
             translator.write_translations(output_file, translations, translation_settings)
         else:
-            additional_output_file = open(output_file.name+'.'+str(idx))
+            additional_output_file = open(output_file.name+'.'+str(idx), 'w')
             translator.write_translations(additional_output_file, translations, translation_settings)
             additional_output_file.close()
 
