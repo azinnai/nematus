@@ -452,37 +452,37 @@ class Translator(object):
         logging.info('Translating {0} segments...\n'.format(len(source_segments)))
         n_samples, source_sentences = self._send_jobs(source_segments, translation_settings)
 
-        translations = []
+        translations = [[] for _ in xrange(self._options[0]['outputs'])]
         for i, trans in enumerate(self._retrieve_jobs(n_samples, translation_settings.request_id)):
-
-            samples, scores, word_probs, alignment, hyp_graph = trans
-            # n-best list
-            if translation_settings.n_best is True:
-                order = numpy.argsort(scores[-1])
-                n_best_list = []
-                for j in order:
-                    current_alignment = None if not translation_settings.get_alignment else alignment[j]
+            for idx, tran in enumerate(trans):
+                samples, scores, word_probs, alignment, hyp_graph = tran
+                # n-best list
+                if translation_settings.n_best is True:
+                    order = numpy.argsort(scores[-1])
+                    n_best_list = []
+                    for j in order:
+                        current_alignment = None if not translation_settings.get_alignment else alignment[j]
+                        translation = Translation(sentence_id=i,
+                                                  source_words=source_sentences[i],
+                                                  target_words=seqs2words(samples[j], self._word_idict_trg, join=False),
+                                                  score=scores[j],
+                                                  alignment=current_alignment,
+                                                  target_probs=word_probs[j],
+                                                  hyp_graph=hyp_graph,
+                                                  hypothesis_id=j)
+                        n_best_list.append(translation)
+                    translations.append(n_best_list)
+                # single-best translation
+                else:
+                    current_alignment = None if not translation_settings.get_alignment else alignment
                     translation = Translation(sentence_id=i,
                                               source_words=source_sentences[i],
-                                              target_words=seqs2words(samples[j], self._word_idict_trg, join=False),
-                                              score=scores[j],
+                                              target_words=seqs2words(samples, self._word_idict_trg, join=False),
+                                              score=scores,
                                               alignment=current_alignment,
-                                              target_probs=word_probs[j],
-                                              hyp_graph=hyp_graph,
-                                              hypothesis_id=j)
-                    n_best_list.append(translation)
-                translations.append(n_best_list)
-            # single-best translation
-            else:
-                current_alignment = None if not translation_settings.get_alignment else alignment
-                translation = Translation(sentence_id=i,
-                                          source_words=source_sentences[i],
-                                          target_words=seqs2words(samples, self._word_idict_trg, join=False),
-                                          score=scores,
-                                          alignment=current_alignment,
-                                          target_probs=word_probs,
-                                          hyp_graph=hyp_graph)
-                translations.append(translation)
+                                              target_probs=word_probs,
+                                              hyp_graph=hyp_graph)
+                    translations[idx].append(translation)
         return translations
 
     def translate_file(self, input_object, translation_settings):
@@ -570,12 +570,8 @@ class Translator(object):
                     self.write_translation(output_file, translation, translation_settings)
         else:
             for translation in translations:
-                for output in self._options[0]['outputs']:
-                    if output_file is 'STDOUT':
-                        self.write_translation(output_file, translation[int(output)],
+                self.write_translation(output_file, translation,
                                                translation_settings)
-                    else:
-                        self.write_translation(output_file+'.'+output, translation[int(output)], translation_settings)
 
 def main(input_file, output_file, decoder_settings, translation_settings):
     """
@@ -583,9 +579,15 @@ def main(input_file, output_file, decoder_settings, translation_settings):
     (or STDOUT).
     """
     translator = Translator(decoder_settings)
-    translations = translator.translate_file(input_file, translation_settings)
+    multi_translations = translator.translate_file(input_file, translation_settings)
 
-    translator.write_translations(output_file, translations, translation_settings)
+    for idx, translations in enumerate(multi_translations):
+        # for compatibility with older version of Nematus
+        if idx == 0 or output_file is sys.stdout:
+            suffix = ''
+        else:
+            suffix = '.' + str(idx)
+        translator.write_translations(output_file+suffix, translations, translation_settings)
 
     logging.info('Done')
     translator.shutdown()
