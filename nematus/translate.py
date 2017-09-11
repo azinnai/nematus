@@ -158,12 +158,12 @@ class Translator(object):
         # load and invert source dictionaries
         word_dicts = []
         word_idicts = []
-        for dictionary in dictionaries_source:
+        for ii, dictionary in enumerate(dictionaries):
             word_dict = load_dict(dictionary)
             # n_words is a list containing the max len of each dictionary
-            if self._options[0]['n_words'][0]:
+            if self._options[0]['n_words'][ii]:
                 for key, idx in word_dict.items():
-                    if idx >= self._options[0]['n_words'][0]:
+                    if idx >= self._options[0]['n_words'][ii]:
                         del word_dict[key]
             word_idict = dict()
             for kk, vv in word_dict.iteritems():
@@ -176,6 +176,7 @@ class Translator(object):
         self._word_dicts = word_dicts
         self._word_idicts = word_idicts
 
+        ''' 
         # load and invert target dictionary
         word_dict_trg = load_dict(dictionary_target)
         word_idict_trg = dict()
@@ -185,6 +186,7 @@ class Translator(object):
         word_idict_trg[1] = 'UNK'
 
         self._word_idict_trg = word_idict_trg
+        '''
 
     def _init_queues(self):
         """
@@ -464,20 +466,20 @@ class Translator(object):
                         current_alignment = None if not translation_settings.get_alignment else alignment[j]
                         translation = Translation(sentence_id=i,
                                                   source_words=source_sentences[i],
-                                                  target_words=seqs2words(samples[j], self._word_idict_trg, join=False),
+                                                  target_words=seqs2words(samples[j], self._word_idicts[idx+self._options[0]['factors']], join=False),
                                                   score=scores[j],
                                                   alignment=current_alignment,
                                                   target_probs=word_probs[j],
                                                   hyp_graph=hyp_graph,
                                                   hypothesis_id=j)
                         n_best_list.append(translation)
-                    translations.append(n_best_list)
+                    translations[idx].append(n_best_list)
                 # single-best translation
                 else:
                     current_alignment = None if not translation_settings.get_alignment else alignment
                     translation = Translation(sentence_id=i,
                                               source_words=source_sentences[i],
-                                              target_words=seqs2words(samples, self._word_idict_trg, join=False),
+                                              target_words=seqs2words(samples, self._word_idicts[idx+self._options[0]['factors']], join=False),
                                               score=scores,
                                               alignment=current_alignment,
                                               target_probs=word_probs,
