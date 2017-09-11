@@ -160,4 +160,4 @@ class TextIterator:
         except IOError:
             self.end_of_data = True
 
-return batches
+	return batches
