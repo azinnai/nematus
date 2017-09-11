@@ -1531,6 +1531,7 @@ def train(dim_word=512,  # word vector dimensionality
                                 sys.stdout.write('|')
                             else:
                                 sys.stdout.write(' ')
+	            print
 
                     for ii in xrange(outputs):
                         sample, score, sample_word_probs, alignment, hyp_graph = gen_sample([f_init], [f_next[ii]],
@@ -1547,8 +1548,8 @@ def train(dim_word=512,  # word vector dimensionality
                         for vv in y[ii][:, jj]:
                             if vv == 0:
                                 break
-                            if vv in worddicts_r[-1]:
-                                print worddicts_r[-1][vv],
+                            if vv in worddicts_r[factors+ii]:
+                                print worddicts_r[factors+ii][vv],
                             else:
                                 print 'UNK',
                         print
@@ -1561,8 +1562,8 @@ def train(dim_word=512,  # word vector dimensionality
                         for vv in ss:
                             if vv == 0:
                                 break
-                            if vv in worddicts_r[-1]:
-                                print worddicts_r[-1][vv],
+                            if vv in worddicts_r[factors+ii]:
+                                print worddicts_r[factors+ii][vv],
                             else:
                                 print 'UNK',
                         print

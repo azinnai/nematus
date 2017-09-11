@@ -115,22 +115,22 @@ class TextIterator:
                 tlen = numpy.array([len(t) for t in self.buffers[-1]])
                 tidx = tlen.argsort()
 
-                for idx, buffer in enumerate(self.buffers):
-                    _buf = [buffer[i] for i in tidx]
+                for idx, buffer_ in enumerate(self.buffers):
+                    _buf = [buffer_[i] for i in tidx]
                     self.buffers[idx] = _buf
 
             else:
-                for buffer in self.buffers:
-                    buffer.reverse()
+                for buffer_ in self.buffers:
+                    buffer_.reverse()
 
         try:
             # actual work here
             while True:
                 # read from source file and map to word index
                 sss = []
-                for idx, buffer in enumerate(self.buffers):
+                for idx, buffer_ in enumerate(self.buffers):
                     try:
-                        ss = buffer.pop()
+                        ss = buffer_.pop()
                     except IndexError:
                         break
                     tmp = []
@@ -160,4 +160,4 @@ class TextIterator:
         except IOError:
             self.end_of_data = True
 
-        return batches
+return batches
