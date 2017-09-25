@@ -1,7 +1,7 @@
 NEMATUS
 -------
 
-Attention-based encoder-decoder model for neural machine translation
+Attention-based encoder-decoder multitask model for neural machine translation
 
 This package is based on the dl4mt-tutorial by Kyunghyun Cho et al. ( https://github.com/nyu-dl/dl4mt-tutorial ).
 It was used to produce top-scoring systems at the WMT 16 shared translation task.
@@ -123,8 +123,8 @@ execute nematus/nmt.py to train a model.
 #### data sets; model loading and saving
 | parameter            | description |
 |---                   |--- |
-| --datasets PATH PATH |  parallel training corpus (source and target) |
-| --dictionaries PATH [PATH ...] | network vocabularies (one per source factor, plus target vocabulary) |
+| --datasets [PATH, PATH, ...] |  parallel training corpus (source and targets) |
+| --dictionaries [PATH, PATH, ...] | network vocabularies (one per source factor, plus one per target vocabularies) |
 | --model PATH         |  model file name (default: model.npz) |
 | --saveFreq INT       |  save frequency (default: 30000) |
 | --reload             |  load existing model (if '--model' points to existing model) |
@@ -135,9 +135,9 @@ execute nematus/nmt.py to train a model.
 |---                   |--- |
 | --dim_word INT       |  embedding layer size (default: 512) |
 | --dim INT            |  hidden layer size (default: 1000) |
-| --n_words_src INT    |  source vocabulary size (default: None) |
-| --n_words INT        |  target vocabulary size (default: None) |
+| --n_words [INT,..]   |  an ordered list of vocabulary sizes (default: None) |
 | --factors INT        |  number of input factors (default: 1) |
+| --outputs INT        |  number of outputs (default: 1) |
 | --dim_per_factor INT [INT ...] | list of word vector dimensionalities (one per factor): '--dim_per_factor 250 200 50' for total dimensionality of 500 (default: None) |
 | --use_dropout        |  use dropout layer (default: False) |
 | --dropout_embedding FLOAT | dropout for input embeddings (0: no dropout) (default: 0.2) |
@@ -179,7 +179,7 @@ execute nematus/nmt.py to train a model.
 #### validation parameters
 | parameter            | description |
 |---                   |--- |
-| --valid_datasets PATH PATH | parallel validation corpus (source and target)| (default: None) |
+| --valid_datasets [PATH, PATH, ...] | parallel validation corpus (source and targets)| (default: None) |
 | --valid_batch_size INT | validation minibatch size (default: 80) |
 | --validFreq INT       | validation frequency (default: 10000) |
 | --patience INT        | early stopping patience (default: 10) |
